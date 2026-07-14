@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบประเมินรายวันพนักงาน</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-main">
+      <div class="brand-mark">📊</div>
+      <div>
+        <h1>ระบบประเมินรายวันพนักงาน</h1>
+        <p>เลือกวันที่เดียว แล้วกรอกคะแนนหรือสถานะวันลาให้พนักงานทั้งทีม พร้อมสรุปรายเดือนอัตโนมัติ</p>
+      </div>
+    </div>
+    <button class="ghost no-print" onclick="saveAll()">บันทึก</button>
+  </div>
+</header>
+<div class="layout">
+  <aside>
+    <div class="section-title">📅 รอบประเมิน</div>
+    <label>เดือนประเมิน</label><input type="month" id="monthPicker" onchange="changeMonth(this.value)">
+    <label>วันที่ที่ต้องการป้อนข้อมูล</label><input type="date" id="datePicker" onchange="changeDate(this.value)">
+    <div class="row"><button onclick="moveDay(-1)">← วันก่อน</button><button onclick="moveDay(1)">วันถัดไป →</button></div>
+    <div class="row"><button class="ghost" onclick="goToday()">วันนี้</button><button class="ghost" onclick="setDateToFirstBlank()">วันว่างถัดไป</button></div>
+    <div class="divider"></div>
+    <div class="section-title">⚡ คำสั่งด่วน</div>
+    <div class="stack">
+      <button class="primary" onclick="fillDefaultForAllBlank()">เติมคะแนนมาตรฐานให้คนที่ยังว่าง</button>
+      <button onclick="copyPreviousDayToBlank()">คัดลอกจากวันก่อนหน้าไปช่องว่าง</button>
+      <button onclick="markBlankAsHoliday()">ทำคนที่ยังว่างเป็นวันหยุด</button>
+      <button class="danger" onclick="clearSelectedDay()">ล้างข้อมูลทั้งวัน</button>
+    </div>
+    <div class="notice">ข้อมูลยังใช้ฐานเดิมใน Browser เครื่องนี้ และบันทึกอัตโนมัติด้วย key เดิม เพื่อไม่กระทบข้อมูลผู้ใช้งานเดิม</div>
+    <div class="row"><button onclick="exportJson()">Export JSON</button><button onclick="document.getElementById('importFile').click()">Import</button><input id="importFile" type="file" accept="application/json" class="hidden" onchange="importJson(event)"></div>
+    <div class="row"><button onclick="exportDailyCsv()">CSV รายวัน</button><button onclick="exportSummaryCsv()">CSV สรุป</button></div>
+    <div class="row"><button onclick="window.print()">พิมพ์/PDF</button><button onclick="resetDemo()">รีเซ็ต</button></div>
+  </aside>
+  <main>
+    <div class="tabs no-print"><button class="tab active" data-view="daily" onclick="setView('daily')">📅 ป้อนรายวันทั้งทีม</button><button class="tab" data-view="employee" onclick="setView('employee')">👨‍🎓 แก้ไขรายบุคคล</button><button class="tab" data-view="summary" onclick="setView('summary')">📊 สรุปรายเดือน</button><button class="tab" data-view="settings" onclick="setView('settings')">📁 ตั้งค่า</button></div>
+    <section id="view-daily" class="card"><div class="title-row"><div><h2 class="day-title" id="dailyTitle">ป้อนข้อมูลรายวัน</h2><div class="subtitle" id="dailySubtitle"></div></div><div class="day-nav no-print"><button onclick="moveDay(-1)">← วันก่อน</button><button class="primary" onclick="saveAll()">บันทึก</button><button onclick="moveDay(1)">วันถัดไป →</button></div></div><div id="dailyKpis" class="kpis"></div><div class="toolbar no-print"><div><label>เลือกพนักงาน</label><select id="employeeSearch" onchange="renderDailyEntry()"><option value="">ทั้งหมด</option></select></div><div><label>กรองสถานะ</label><select id="statusFilter" onchange="renderDailyEntry()"><option value="all">ทั้งหมด</option><option value="blank">ยังว่าง</option><option value="complete">กรอกคะแนนครบ</option><option value="partial">กรอกไม่ครบ</option><option value="leave">ลา/หยุด</option></select></div><div class="wide"><label>หมายเหตุของวัน</label><textarea id="dayNote" class="daily-note" placeholder="เช่น งานเร่งด่วน, ประชุม, PM นอกสถานที่" onchange="saveDayNote(this.value)"></textarea></div></div><div class="notice">เลือกสถานะวันเป็น <b>ทำงาน</b> เพื่อกรอกคะแนน หรือเลือก <b>พักร้อน/ลากิจ/ลาป่วย/ชดเชย/วันหยุด</b> เพื่อบันทึกสถานะนั้นให้ทุกหัวข้อของพนักงานคนนั้น</div><div id="dailyTable" class="table-wrap"></div></section>
+    <section id="view-employee" class="card hidden"><div class="title-row"><div><h2 class="day-title">แก้ไขรายบุคคล</h2><div class="subtitle">ตรวจและแก้ไขย้อนหลังได้ทั้งเดือน</div></div><button class="primary no-print" onclick="copyFirstWorkday()">คัดลอกวันแรกที่มีคะแนนไปวันว่าง</button></div><div class="toolbar no-print"><div><label>เลือกพนักงาน</label><select id="employeeSelect" onchange="renderEmployeeEntry()"></select></div><div><label>กรองวันที่</label><select id="dayFilter" onchange="renderEmployeeEntry()"><option value="all">แสดงทุกวัน</option><option value="work">เฉพาะวันที่มีข้อมูล</option><option value="blank">เฉพาะวันที่ยังว่าง</option></select></div></div><div id="employeeTable" class="table-wrap"></div></section>
+    <section id="view-summary" class="card hidden"><h2 class="day-title">สรุปประเมินรายเดือน</h2><div class="subtitle" id="summarySubtitle"></div><div id="summaryKpis" class="kpis"></div><div id="summaryTable" class="table-wrap"></div><div class="small">วันทำงานจริง = วันที่มีคะแนนตัวเลขอย่างน้อย 1 หัวข้อ / วันลา-หยุดนับ 1 วันต่อคนต่อประเภทสถานะ</div></section>
+    <section id="view-settings" class="card hidden"><h2 class="day-title">ตั้งค่าพนักงานและหัวข้อประเมิน</h2><div class="settings-grid"><div><div class="section-title">👨‍🎓 พนักงาน</div><div id="employeeManager" class="emp-list"></div><button class="ghost full" onclick="addEmployee()">เพิ่มพนักงาน</button></div><div><div class="section-title">✅ หัวข้อประเมิน</div><div id="criteriaManager"></div><button class="ghost" onclick="addCriterion()">เพิ่มหัวข้อ</button></div></div></section>
+  </main>
+</div>
+<div id="saveStatus" class="save-status is-saved" role="status" aria-live="polite"><span class="save-status-dot"></span><span id="saveStatusText">บันทึกอัตโนมัติแล้ว</span></div>
+<div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+<button id="shortcutHelp" class="shortcut-help no-print" type="button" aria-label="ดูคีย์ลัด" title="คีย์ลัด" onclick="showShortcutHelp()">?</button>
+<div id="resetModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+  <div class="modal-card">
+    <button class="modal-close" type="button" onclick="closeResetModal()" aria-label="ปิด">×</button>
+    <div class="modal-icon">🔐</div>
+    <h2 id="resetModalTitle">ยืนยันการรีเซ็ตข้อมูล</h2>
+    <p>การรีเซ็ตจะล้างข้อมูลที่บันทึกไว้ใน Browser เครื่องนี้ และกลับไปใช้ข้อมูลตั้งต้น กรุณากรอกรหัสผู้ดูแลเพื่อดำเนินการ</p>
+    <label for="resetPasswordInput">รหัสผู้ดูแล</label>
+    <input id="resetPasswordInput" type="password" autocomplete="off" placeholder="กรอกรหัส Admin">
+    <div id="resetPasswordError" class="modal-error hidden">รหัสไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง</div>
+    <div class="modal-actions">
+      <button type="button" class="ghost" onclick="closeResetModal()">ยกเลิก</button>
+      <button type="button" class="danger" onclick="confirmResetWithPassword()">ยืนยันรีเซ็ต</button>
+    </div>
+  </div>
+</div>
+<div id="appModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="appModalTitle">
+  <div class="modal-card app-modal-card">
+    <button class="modal-close" type="button" onclick="closeAppModal()" aria-label="ปิด">×</button>
+    <div id="appModalIcon" class="modal-icon">ℹ️</div>
+    <h2 id="appModalTitle">แจ้งเตือน</h2>
+    <p id="appModalMessage"></p>
+    <div id="appModalInputWrap" class="hidden">
+      <label id="appModalInputLabel" for="appModalInput">ข้อมูล</label>
+      <input id="appModalInput" type="text" autocomplete="off">
+      <div id="appModalError" class="modal-error hidden"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="appModalCancel" type="button" class="ghost" onclick="closeAppModal()">ยกเลิก</button>
+      <button id="appModalConfirm" type="button" class="primary" onclick="confirmAppModal()">ตกลง</button>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
