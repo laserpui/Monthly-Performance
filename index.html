@@ -22,9 +22,9 @@
 <div class="layout">
   <aside>
     <div class="section-title">📅 รอบประเมิน</div>
-    <label>เดือนประเมิน</label><input type="month" id="monthPicker" onchange="changeMonth(this.value)">
-    <label>วันที่ที่ต้องการป้อนข้อมูล</label><input type="date" id="datePicker" onchange="changeDate(this.value)">
-    <div class="row"><button onclick="moveDay(-1)">← วันก่อน</button><button onclick="moveDay(1)">วันถัดไป →</button></div>
+    <label for="monthPicker">เดือนประเมิน</label><select id="monthPicker" class="thai-date-picker" onchange="changeMonth(this.value)" aria-label="เลือกเดือนประเมิน"></select>
+    <label for="datePicker">วันที่ที่ต้องการป้อนข้อมูล</label><select id="datePicker" class="thai-date-picker" onchange="changeDate(this.value)" aria-label="เลือกวันที่ป้อนข้อมูล"></select>
+    <div class="row"><button id="previousDayButton" onclick="moveDay(-1)">← วันก่อน</button><button id="nextDayButton" onclick="moveDay(1)">วันถัดไป →</button></div>
     <div class="row"><button class="ghost" onclick="goToday()">วันนี้</button><button class="ghost" onclick="setDateToFirstBlank()">วันว่างถัดไป</button></div>
     <div class="divider"></div>
     <div class="section-title">⚡ คำสั่งด่วน</div>
