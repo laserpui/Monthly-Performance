@@ -34,8 +34,7 @@
       <button onclick="markBlankAsHoliday()">ทำคนที่ยังว่างเป็นวันหยุด</button>
       <button class="danger" onclick="clearSelectedDay()">ล้างข้อมูลทั้งวัน</button>
     </div>
-    <div class="notice">ฐานข้อมูลหลักคือ Google Sheets และบันทึกอัตโนมัติ ส่วนข้อมูลใน Browser ใช้เป็น cache สำรองเมื่อการเชื่อมต่อขัดข้อง</div>
-    <div class="row"><button onclick="exportJson()">สำรอง JSON</button><button onclick="document.getElementById('importFile').click()">กู้คืน JSON</button><input id="importFile" type="file" accept="application/json" class="hidden" onchange="importJson(event)"></div>
+    <div class="notice">ฐานข้อมูลหลักคือ Google Sheets การแก้ไขจะยังไม่ส่งไปยัง Sheet จนกว่าจะกดปุ่ม <b>บันทึก</b> หรือใช้ Ctrl+S</div>
     <div class="row"><button onclick="exportDailyCsv()">CSV รายวัน</button><button onclick="exportSummaryCsv()">CSV สรุป</button></div>
     <div class="row"><button onclick="window.print()">พิมพ์/PDF</button><button onclick="resetDemo()">รีเซ็ต</button></div>
   </aside>
@@ -47,7 +46,7 @@
     <section id="view-settings" class="card hidden"><h2 class="day-title">ตั้งค่าพนักงานและหัวข้อประเมิน</h2><div class="settings-grid"><div><div class="section-title">👨‍🎓 พนักงาน</div><div id="employeeManager" class="emp-list"></div><button class="ghost full" onclick="addEmployee()">เพิ่มพนักงาน</button></div><div><div class="section-title">✅ หัวข้อประเมิน</div><div id="criteriaManager"></div><button class="ghost" onclick="addCriterion()">เพิ่มหัวข้อ</button></div></div></section>
   </main>
 </div>
-<div id="saveStatus" class="save-status is-saved" role="status" aria-live="polite"><span class="save-status-dot"></span><span id="saveStatusText">บันทึกอัตโนมัติแล้ว</span></div>
+<div id="saveStatus" class="save-status is-saved" role="status" aria-live="polite"><span class="save-status-dot"></span><span id="saveStatusText">บันทึกใน Google Sheets แล้ว</span></div>
 <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 <button id="shortcutHelp" class="shortcut-help no-print" type="button" aria-label="ดูคีย์ลัด" title="คีย์ลัด" onclick="showShortcutHelp()">?</button>
 <div id="resetModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">

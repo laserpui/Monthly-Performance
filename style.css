@@ -3,3 +3,5 @@
 .thai-date-picker{font-weight:700;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:38px;appearance:none}.thai-date-picker:hover{border-color:rgba(37,99,235,.4);background-color:#fff}button:disabled{cursor:not-allowed;opacity:.42;transform:none!important;box-shadow:none!important}
 
 .save-status.is-error{color:#b91c1c}.save-status.is-error .save-status-dot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.13)}
+
+.save-status.is-dirty{color:#9a6700}.save-status.is-dirty .save-status-dot{background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.15)}

@@ -32,4 +32,4 @@
 {"ok":true,"service":"monthly-evaluation-sheets-api"}
 ```
 
-จากนั้นเปิด `index.html` เว็บจะโหลดข้อมูลจาก Google Sheets และบันทึกกลับอัตโนมัติ ส่วน `localStorage` ใช้เป็น cache สำรองเมื่อการเชื่อมต่อล้มเหลวเท่านั้น
+จากนั้นเปิด `index.html` เว็บจะโหลดข้อมูลจาก Google Sheets การแก้ไขบนหน้าจอจะเก็บไว้ใน `localStorage` เป็น cache และจะส่งกลับไปยัง Google Sheets เฉพาะเมื่อกดปุ่ม **บันทึก** หรือใช้ `Ctrl+S` เท่านั้น
