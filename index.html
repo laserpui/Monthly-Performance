@@ -34,8 +34,8 @@
       <button onclick="markBlankAsHoliday()">ทำคนที่ยังว่างเป็นวันหยุด</button>
       <button class="danger" onclick="clearSelectedDay()">ล้างข้อมูลทั้งวัน</button>
     </div>
-    <div class="notice">ข้อมูลยังใช้ฐานเดิมใน Browser เครื่องนี้ และบันทึกอัตโนมัติด้วย key เดิม เพื่อไม่กระทบข้อมูลผู้ใช้งานเดิม</div>
-    <div class="row"><button onclick="exportJson()">Export JSON</button><button onclick="document.getElementById('importFile').click()">Import</button><input id="importFile" type="file" accept="application/json" class="hidden" onchange="importJson(event)"></div>
+    <div class="notice">ฐานข้อมูลหลักคือ Google Sheets และบันทึกอัตโนมัติ ส่วนข้อมูลใน Browser ใช้เป็น cache สำรองเมื่อการเชื่อมต่อขัดข้อง</div>
+    <div class="row"><button onclick="exportJson()">สำรอง JSON</button><button onclick="document.getElementById('importFile').click()">กู้คืน JSON</button><input id="importFile" type="file" accept="application/json" class="hidden" onchange="importJson(event)"></div>
     <div class="row"><button onclick="exportDailyCsv()">CSV รายวัน</button><button onclick="exportSummaryCsv()">CSV สรุป</button></div>
     <div class="row"><button onclick="window.print()">พิมพ์/PDF</button><button onclick="resetDemo()">รีเซ็ต</button></div>
   </aside>
@@ -82,6 +82,7 @@
     </div>
   </div>
 </div>
+<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
