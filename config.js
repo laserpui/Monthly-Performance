@@ -4,4 +4,7 @@ window.APP_CONFIG = Object.freeze({
 
   // Optional: must match the API_TOKEN Script Property in Apps Script.
   apiToken: '',
+
+  // Admin password for settings access and data reset. Keep this file confidential.
+  adminPassword: 'Admin1234',
 });
