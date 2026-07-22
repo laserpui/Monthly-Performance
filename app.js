@@ -2,9 +2,26 @@ const SCORE_OPTIONS = Array.from({ length: 15 }, (_, index) => Number((-0.5 + in
 const ALL_EMPLOYEES_ID = '__ALL_ACTIVE_EMPLOYEES__';
 const THAI_COLLATOR = new Intl.Collator('th', { sensitivity: 'base', numeric: true });
 const ENTRY_DRAFT_KEY = 'monthlyPerformanceEntryDraftV3';
+const API_URL_STORAGE_KEY = 'monthlyPerformanceApiUrl';
+const DEMO_MODE_STORAGE_KEY = 'monthlyPerformanceDemoMode';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzYA2phGwVxs7frTGSZmZjuxfpc7WAajX87VT4ohgo_jfXTXf88hdAgFQG3ZhjTdVJuMQ/exec';
+const API_RETRY_DELAYS_MS = [0, 900, 2200];
+
+function normalizeApiUrl(value = '') {
+  const url = String(value).trim();
+  if (!url) return '';
+  return url.replace(/\/+$/, '');
+}
+
+function getInitialApiUrl() {
+  const explicitDemoMode = localStorage.getItem(DEMO_MODE_STORAGE_KEY) === '1';
+  if (explicitDemoMode) return '';
+  const stored = localStorage.getItem(API_URL_STORAGE_KEY) || localStorage.getItem('serviceIncentiveApiUrl');
+  return normalizeApiUrl(stored || DEFAULT_API_URL);
+}
 
 const APP = {
-  apiUrl: localStorage.getItem('monthlyPerformanceApiUrl') || localStorage.getItem('serviceIncentiveApiUrl') || '',
+  apiUrl: getInitialApiUrl(),
   month: new Date().toISOString().slice(0, 7),
   bootstrap: null,
   editingEntry: null,
@@ -91,15 +108,42 @@ function getDemoData(name, fallback) {
 }
 function setDemoData(name, value) { localStorage.setItem(demoKey(name), JSON.stringify(value)); }
 
+function wait(milliseconds) {
+  return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+}
+
+function isRetryableApiError(error) {
+  const message = String(error?.message || error || '');
+  return error instanceof TypeError || /เชื่อมต่อไม่สำเร็จ|Failed to fetch|NetworkError|Load failed|502|503|504/i.test(message);
+}
+
+async function fetchApiWithRetry(url, requestPayload) {
+  let lastError = null;
+  for (let attempt = 0; attempt < API_RETRY_DELAYS_MS.length; attempt += 1) {
+    if (API_RETRY_DELAYS_MS[attempt]) await wait(API_RETRY_DELAYS_MS[attempt]);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: new URLSearchParams({ payload: JSON.stringify(requestPayload) }),
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`เชื่อมต่อไม่สำเร็จ (${response.status})`);
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableApiError(error) || attempt === API_RETRY_DELAYS_MS.length - 1) break;
+    }
+  }
+  throw lastError || new Error('เชื่อมต่อ Backend ไม่สำเร็จ');
+}
+
 async function api(payload) {
   const requestPayload = { ...payload, adminToken: payload.adminToken ?? APP.adminToken };
   if (!APP.apiUrl) return demoApi(requestPayload);
-  const response = await fetch(APP.apiUrl, { method: 'POST', body: new URLSearchParams({ payload: JSON.stringify(requestPayload) }) });
-  if (!response.ok) throw new Error(`เชื่อมต่อไม่สำเร็จ (${response.status})`);
-  const result = await response.json();
-  if (!result.ok) {
-    if (/เซสชันผู้ดูแล/.test(result.error || '')) clearAdminSession(false);
-    throw new Error(result.error || 'Google Apps Script ส่งข้อผิดพลาดกลับมา');
+  const result = await fetchApiWithRetry(APP.apiUrl, requestPayload);
+  if (!result?.ok) {
+    if (/เซสชันผู้ดูแล/.test(result?.error || '')) clearAdminSession(false);
+    throw new Error(result?.error || 'Google Apps Script ส่งข้อผิดพลาดกลับมา');
   }
   return result.data;
 }
@@ -828,21 +872,47 @@ function bindEvents() {
   $('#refreshAuditBtn').addEventListener('click', loadAudit);
   $('#searchAuditBtn').addEventListener('click', loadAudit);
   $('#saveApiBtn').addEventListener('click', async () => {
-    APP.apiUrl = $('#apiUrlInput').value.trim(); if (!APP.apiUrl) return toast('กรุณาวาง URL ของ Web App');
-    localStorage.setItem('monthlyPerformanceApiUrl', APP.apiUrl); await loadApp(); toast('บันทึก URL แล้ว');
+    const url = normalizeApiUrl($('#apiUrlInput').value);
+    if (!url) return toast('กรุณาวาง URL ของ Web App');
+    APP.apiUrl = url;
+    localStorage.setItem(API_URL_STORAGE_KEY, APP.apiUrl);
+    localStorage.removeItem(DEMO_MODE_STORAGE_KEY);
+    $('#apiUrlInput').value = APP.apiUrl;
+    await loadApp();
+    toast('บันทึก URL และเชื่อมต่อแล้ว');
   });
   $('#testApiBtn').addEventListener('click', async () => {
-    const url = $('#apiUrlInput').value.trim(); if (!url) return toast('กรุณาวาง URL ก่อน');
-    const old = APP.apiUrl; APP.apiUrl = url;
-    try { const result = await api({ action: 'ping' }); toast(`เชื่อมต่อสำเร็จ · Backend ${result.version || ''}`); setConnectionBadge('live'); }
-    catch (error) { toast(error.message); setConnectionBadge('error'); }
-    finally { APP.apiUrl = old; }
+    const url = normalizeApiUrl($('#apiUrlInput').value);
+    if (!url) return toast('กรุณาวาง URL ก่อน');
+    const old = APP.apiUrl;
+    APP.apiUrl = url;
+    try {
+      const result = await api({ action: 'ping' });
+      toast(`เชื่อมต่อสำเร็จ · Backend ${result.version || ''}`);
+      setConnectionBadge('live');
+    } catch (error) {
+      toast(error.message);
+      setConnectionBadge('error');
+    } finally {
+      APP.apiUrl = old;
+    }
   });
-  $('#demoModeBtn').addEventListener('click', async () => { APP.apiUrl = ''; localStorage.removeItem('monthlyPerformanceApiUrl'); $('#apiUrlInput').value = ''; clearAdminSession(false); await loadApp(); toast('กลับสู่โหมดทดลองแล้ว'); });
+  $('#demoModeBtn').addEventListener('click', async () => {
+    APP.apiUrl = '';
+    localStorage.setItem(DEMO_MODE_STORAGE_KEY, '1');
+    $('#apiUrlInput').value = '';
+    clearAdminSession(false);
+    await loadApp();
+    toast('กลับสู่โหมดทดลองแล้ว');
+  });
   window.addEventListener('beforeunload', event => { if (!APP.entryDirty) return; event.preventDefault(); event.returnValue = ''; });
 }
 
 async function init() {
+  if (APP.apiUrl) {
+    localStorage.setItem(API_URL_STORAGE_KEY, APP.apiUrl);
+    localStorage.removeItem(DEMO_MODE_STORAGE_KEY);
+  }
   $('#monthPicker').value = APP.month;
   $('#entryDate').value = new Date().toISOString().slice(0, 10);
   $('#apiUrlInput').value = APP.apiUrl;
