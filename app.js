@@ -3,8 +3,8 @@ const ALL_EMPLOYEES_ID = '__ALL_ACTIVE_EMPLOYEES__';
 const THAI_COLLATOR = new Intl.Collator('th', { sensitivity: 'base', numeric: true });
 const ENTRY_DRAFT_KEY = 'monthlyPerformanceEntryDraftV3';
 // Backend หลักของระบบ: ฝังไว้ในโค้ด ไม่อ่านจาก localStorage และไม่ให้เปลี่ยนจากหน้าเว็บ
-const BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbzYA2phGwVxs7frTGSZmZjuxfpc7WAajX87VT4ohgo_jfXTXf88hdAgFQG3ZhjTdVJuMQ/exec';
-const API_RETRY_DELAYS_MS = [0, 900, 2200];
+const BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbw2M8YxAe600Rble3lX3_etg4Ru58o0-BB46b-Pgd9fXKvG0KwbpU2dzs-0YQE8UUbSfw/exec';
+const API_RETRY_DELAYS_MS = [0, 700, 1600];
 
 const APP = {
   apiUrl: BACKEND_API_URL,
@@ -143,7 +143,7 @@ async function demoApi(payload) {
   const pushAudit = row => setDemoData('audits', [{ timestamp: new Date().toISOString(), actor: 'Administrator', ...row }, ...audits].slice(0, 500));
 
   switch (payload.action) {
-    case 'ping': return { message: 'demo-ok', version: '3.0' };
+    case 'ping': return { message: 'demo-ok', version: '3.1.0' };
     case 'adminLogin':
       if (payload.password !== 'Admin1234') throw new Error('รหัสผ่านผู้ดูแลไม่ถูกต้อง');
       return { token: 'demo-admin', session: { actor: 'Administrator', expiresAt: new Date(Date.now() + 21600000).toISOString() } };
@@ -154,7 +154,7 @@ async function demoApi(payload) {
       bootstrap.monthStatus = monthStatuses[payload.monthKey] || { monthKey: payload.monthKey, status: 'OPEN' };
       bootstrap.validation = validateClientMonth(bootstrap);
       bootstrap.admin = { authenticated: payload.adminToken === 'demo-admin', session: payload.adminToken === 'demo-admin' ? { actor: 'Administrator' } : null };
-      bootstrap.version = '3.0-demo';
+      bootstrap.version = '3.1.0-demo';
       return bootstrap;
     }
     case 'searchEntries': {
@@ -317,6 +317,7 @@ function validateClientMonth(bootstrap) {
 }
 
 async function loadApp(showToast = false) {
+  const clientStartedAt = performance.now();
   setConnectionBadge('loading');
   try {
     APP.bootstrap = await api({ action: 'bootstrap', monthKey: APP.month });
@@ -328,11 +329,25 @@ async function loadApp(showToast = false) {
       APP.bootstrap.summary = calculated.rows;
       APP.bootstrap.incentiveRanges = calculated.incentiveRanges;
     }
+    if (!APP.bootstrap.validation) APP.bootstrap.validation = validateClientMonth(APP.bootstrap);
     initializeEntrySearchDefaults();
-    await loadEntrySearchResults();
+
+    const entryListReady = hydrateEntrySearchFromBootstrap();
     renderAll();
     setConnectionBadge('live');
-    if (showToast) toast('อัปเดตข้อมูลเรียบร้อย');
+
+    const clientMs = Math.round(performance.now() - clientStartedAt);
+    const serverMs = Number(APP.bootstrap?.performance?.serverMs || 0);
+    const cacheText = APP.bootstrap?.performance?.cacheHit ? 'cache' : 'sheet';
+    console.info(`[Monthly Performance] load ${clientMs} ms · server ${serverMs} ms · ${cacheText}`);
+    if (showToast) toast(`อัปเดตข้อมูลเรียบร้อย (${(clientMs / 1000).toFixed(1)} วินาที)`);
+
+    // กรณีตัวกรองรายการอยู่ข้ามเดือน ให้หน้า Dashboard แสดงก่อน แล้วโหลดรายการย้อนหลังภายหลัง
+    if (!entryListReady) {
+      loadEntrySearchResults()
+        .then(() => renderEntries())
+        .catch(error => console.error('Background entry search failed:', error));
+    }
   } catch (error) {
     console.error(error);
     setConnectionBadge('error');
@@ -345,6 +360,28 @@ function initializeEntrySearchDefaults(force = false) {
   if (force || !APP.entrySearch.dateFrom) APP.entrySearch.dateFrom = range.start;
   if (force || !APP.entrySearch.dateTo) APP.entrySearch.dateTo = range.end;
 }
+function hydrateEntrySearchFromBootstrap() {
+  const monthRange = getMonthDateRange(APP.month);
+  const dateFrom = APP.entrySearch.dateFrom || monthRange.start;
+  const dateTo = APP.entrySearch.dateTo || monthRange.end;
+  const withinCurrentMonth = dateFrom >= monthRange.start && dateTo <= monthRange.end;
+  if (!withinCurrentMonth) {
+    APP.entrySearch.results = [];
+    APP.entrySearch.total = 0;
+    return false;
+  }
+
+  const filtered = (APP.bootstrap?.entries || [])
+    .filter(entry => !APP.entrySearch.employeeId || entry.employeeId === APP.entrySearch.employeeId)
+    .filter(entry => !dateFrom || String(entry.date).slice(0, 10) >= dateFrom)
+    .filter(entry => !dateTo || String(entry.date).slice(0, 10) <= dateTo)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(a.employeeId).localeCompare(String(b.employeeId)));
+  APP.entrySearch.results = filtered.slice(0, APP.entrySearch.pageSize);
+  APP.entrySearch.total = filtered.length;
+  persistEntrySearchFilters();
+  return true;
+}
+
 function persistEntrySearchFilters() {
   localStorage.setItem('monthlyPerformanceEntryFilterEmployee', APP.entrySearch.employeeId || '');
   localStorage.setItem('monthlyPerformanceEntryFilterDateFrom', APP.entrySearch.dateFrom || '');
