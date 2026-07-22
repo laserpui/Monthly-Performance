@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3.0.1" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -23,7 +23,7 @@
       </div>
       <div class="topbar-actions">
         <span id="adminBadge" class="badge badge-locked">ผู้ใช้ทั่วไป</span>
-        <span id="connectionBadge" class="badge badge-demo">โหมดทดลอง</span>
+        <span id="connectionBadge" class="badge badge-demo">กำลังเชื่อมต่อ…</span>
         <button id="refreshBtn" class="btn btn-secondary" type="button">รีเฟรช</button>
       </div>
     </header>
@@ -280,12 +280,14 @@
             <div><h2>ตั้งค่าระบบ</h2><p id="adminSessionText">เข้าสู่ระบบผู้ดูแลแล้ว</p></div>
             <button id="adminLogoutBtn" class="btn btn-ghost btn-small" type="button">ออกจากระบบผู้ดูแล</button>
           </div>
-          <label class="field"><span>Apps Script Web App URL</span><input id="apiUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" /></label>
+          <div class="notice connection-notice">
+            <strong>การเชื่อมต่อ Google Sheets</strong>
+            <p>ระบบกำหนด Backend ไว้ในไฟล์ <code>app.js</code> แล้ว และจะเชื่อมต่ออัตโนมัติทุกครั้งที่เปิด Web</p>
+            <p>ไม่ต้องกรอกหรือบันทึก Apps Script URL จากหน้า Web อีกต่อไป</p>
+          </div>
           <div class="form-actions left">
-            <button id="saveApiBtn" class="btn btn-primary" type="button">บันทึก URL</button>
-            <button id="testApiBtn" class="btn btn-secondary" type="button">ทดสอบการเชื่อมต่อ</button>
+            <button id="testBackendBtn" class="btn btn-primary" type="button">ตรวจสอบการเชื่อมต่อ</button>
             <button id="backupNowBtn" class="btn btn-secondary" type="button">สำรอง Google Sheet ตอนนี้</button>
-            <button id="demoModeBtn" class="btn btn-ghost" type="button">กลับโหมดทดลอง</button>
           </div>
           <div class="notice">
             <strong>ความปลอดภัยและการควบคุมข้อมูล V3</strong>
@@ -298,10 +300,10 @@
       </section>
     </main>
 
-    <footer><span>Monthly Performance V3.0.1 · GitHub Pages + Google Sheets</span></footer>
+    <footer><span>Monthly Performance V3.0.2 · GitHub Pages + Google Sheets</span></footer>
   </div>
 
   <div id="toast" class="toast" aria-live="polite"></div>
-  <script src="app.js?v=3.0.1"></script>
+  <script src="app.js?v=3.0.2"></script>
 </body>
 </html>

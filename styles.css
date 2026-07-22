@@ -244,7 +244,7 @@ footer { padding: 22px 6px 0; color: var(--muted); font-size: .8rem; text-align:
 @media (max-width: 980px) { .range-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); } }
 @media (max-width: 560px) { .range-grid { grid-template-columns: 1fr; } }
 
-/* Monthly Performance V3.0 */
+/* Monthly Performance V3.0.1 */
 .badge-locked { color: #475569; background: #e2e8f0; }
 .badge-admin { color: #5b21b6; background: #ede9fe; }
 .badge-draft { color: #92400e; background: #fef3c7; }

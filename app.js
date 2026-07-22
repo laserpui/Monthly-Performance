@@ -2,26 +2,12 @@ const SCORE_OPTIONS = Array.from({ length: 15 }, (_, index) => Number((-0.5 + in
 const ALL_EMPLOYEES_ID = '__ALL_ACTIVE_EMPLOYEES__';
 const THAI_COLLATOR = new Intl.Collator('th', { sensitivity: 'base', numeric: true });
 const ENTRY_DRAFT_KEY = 'monthlyPerformanceEntryDraftV3';
-const API_URL_STORAGE_KEY = 'monthlyPerformanceApiUrl';
-const DEMO_MODE_STORAGE_KEY = 'monthlyPerformanceDemoMode';
-const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzYA2phGwVxs7frTGSZmZjuxfpc7WAajX87VT4ohgo_jfXTXf88hdAgFQG3ZhjTdVJuMQ/exec';
+// Backend หลักของระบบ: ฝังไว้ในโค้ด ไม่อ่านจาก localStorage และไม่ให้เปลี่ยนจากหน้าเว็บ
+const BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbzYA2phGwVxs7frTGSZmZjuxfpc7WAajX87VT4ohgo_jfXTXf88hdAgFQG3ZhjTdVJuMQ/exec';
 const API_RETRY_DELAYS_MS = [0, 900, 2200];
 
-function normalizeApiUrl(value = '') {
-  const url = String(value).trim();
-  if (!url) return '';
-  return url.replace(/\/+$/, '');
-}
-
-function getInitialApiUrl() {
-  const explicitDemoMode = localStorage.getItem(DEMO_MODE_STORAGE_KEY) === '1';
-  if (explicitDemoMode) return '';
-  const stored = localStorage.getItem(API_URL_STORAGE_KEY) || localStorage.getItem('serviceIncentiveApiUrl');
-  return normalizeApiUrl(stored || DEFAULT_API_URL);
-}
-
 const APP = {
-  apiUrl: getInitialApiUrl(),
+  apiUrl: BACKEND_API_URL,
   month: new Date().toISOString().slice(0, 7),
   bootstrap: null,
   editingEntry: null,
@@ -139,7 +125,6 @@ async function fetchApiWithRetry(url, requestPayload) {
 
 async function api(payload) {
   const requestPayload = { ...payload, adminToken: payload.adminToken ?? APP.adminToken };
-  if (!APP.apiUrl) return demoApi(requestPayload);
   const result = await fetchApiWithRetry(APP.apiUrl, requestPayload);
   if (!result?.ok) {
     if (/เซสชันผู้ดูแล/.test(result?.error || '')) clearAdminSession(false);
@@ -346,7 +331,7 @@ async function loadApp(showToast = false) {
     initializeEntrySearchDefaults();
     await loadEntrySearchResults();
     renderAll();
-    setConnectionBadge(APP.apiUrl ? 'live' : 'demo');
+    setConnectionBadge('live');
     if (showToast) toast('อัปเดตข้อมูลเรียบร้อย');
   } catch (error) {
     console.error(error);
@@ -871,51 +856,23 @@ function bindEvents() {
   $('#backupNowBtn').addEventListener('click', backupNow);
   $('#refreshAuditBtn').addEventListener('click', loadAudit);
   $('#searchAuditBtn').addEventListener('click', loadAudit);
-  $('#saveApiBtn').addEventListener('click', async () => {
-    const url = normalizeApiUrl($('#apiUrlInput').value);
-    if (!url) return toast('กรุณาวาง URL ของ Web App');
-    APP.apiUrl = url;
-    localStorage.setItem(API_URL_STORAGE_KEY, APP.apiUrl);
-    localStorage.removeItem(DEMO_MODE_STORAGE_KEY);
-    $('#apiUrlInput').value = APP.apiUrl;
-    await loadApp();
-    toast('บันทึก URL และเชื่อมต่อแล้ว');
-  });
-  $('#testApiBtn').addEventListener('click', async () => {
-    const url = normalizeApiUrl($('#apiUrlInput').value);
-    if (!url) return toast('กรุณาวาง URL ก่อน');
-    const old = APP.apiUrl;
-    APP.apiUrl = url;
+  $('#testBackendBtn').addEventListener('click', async () => {
+    setConnectionBadge('loading');
     try {
       const result = await api({ action: 'ping' });
-      toast(`เชื่อมต่อสำเร็จ · Backend ${result.version || ''}`);
       setConnectionBadge('live');
+      toast(`เชื่อมต่อ Backend สำเร็จ${result.version ? ` · V${result.version}` : ''}`);
     } catch (error) {
-      toast(error.message);
       setConnectionBadge('error');
-    } finally {
-      APP.apiUrl = old;
+      toast(error.message || 'เชื่อมต่อ Backend ไม่สำเร็จ');
     }
-  });
-  $('#demoModeBtn').addEventListener('click', async () => {
-    APP.apiUrl = '';
-    localStorage.setItem(DEMO_MODE_STORAGE_KEY, '1');
-    $('#apiUrlInput').value = '';
-    clearAdminSession(false);
-    await loadApp();
-    toast('กลับสู่โหมดทดลองแล้ว');
   });
   window.addEventListener('beforeunload', event => { if (!APP.entryDirty) return; event.preventDefault(); event.returnValue = ''; });
 }
 
 async function init() {
-  if (APP.apiUrl) {
-    localStorage.setItem(API_URL_STORAGE_KEY, APP.apiUrl);
-    localStorage.removeItem(DEMO_MODE_STORAGE_KEY);
-  }
   $('#monthPicker').value = APP.month;
   $('#entryDate').value = new Date().toISOString().slice(0, 10);
-  $('#apiUrlInput').value = APP.apiUrl;
   $('#summarySortSelect').value = APP.summarySort;
   $('#auditMonthFilter').value = APP.month;
   bindEvents();
